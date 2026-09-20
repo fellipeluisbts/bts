@@ -60,6 +60,7 @@ button { border: 0; cursor: pointer; }
 .panel-close:hover { background: #eef1f4; }
 .panel-list, .extensions-list { display: grid; gap: 3px; }
 .empty-state { padding: 14px 8px; color: var(--muted); font-size: 12px; }
+.bookmarks-panel { width: 260px; }
 .bookmarks-panel .bookmark-item { width: 100%; max-width: none; text-align: left; padding: 9px; }
 .browser-menu { width: 300px; }
 .menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 9px; border-radius: 7px; background: transparent; color: var(--ink); text-align: left; }

@@ -61,7 +61,9 @@ function renderBookmarks(bookmarks) {
 function togglePanel(id, visible) {
   document.querySelectorAll('.floating-panel').forEach((panel) => { if (panel.id !== id) panel.hidden = true; });
   const panel = document.querySelector(`#${id}`);
-  if (panel) panel.hidden = visible === undefined ? !panel.hidden : !visible;
+  if (!panel) return;
+  panel.hidden = visible === undefined ? !panel.hidden : !visible;
+  window.browserAPI.setUiOverlay(!panel.hidden);
 }
 
 async function renderExtensions() {
@@ -101,6 +103,8 @@ addressForm.addEventListener('submit', (event) => {
   window.browserAPI.navigate(address.value);
   address.blur();
 });
+address.addEventListener('click', () => address.select());
+address.addEventListener('focus', () => address.select());
 
 document.querySelector('#new-tab').addEventListener('click', () => window.browserAPI.createTab());
 document.querySelector('#mosaic').addEventListener('click', (event) => {
@@ -112,6 +116,12 @@ document.querySelector('#select-all-tabs').addEventListener('change', (event) =>
   window.browserAPI.selectAllTabs(event.target.checked);
 });
 document.querySelector('#bookmarks').addEventListener('click', () => togglePanel('bookmarks-panel'));
+document.querySelector('#bookmarks').addEventListener('click', () => {
+  const button = document.querySelector('#bookmarks').getBoundingClientRect();
+  const panel = document.querySelector('#bookmarks-panel');
+  panel.style.left = `${button.left}px`;
+  panel.style.right = 'auto';
+});
 document.querySelector('#menu-button').addEventListener('click', async () => {
   const sidePanel = document.querySelector('#side-panel-content');
   const menu = document.querySelector('#browser-menu');
@@ -132,7 +142,7 @@ document.querySelector('#close-side-panel').addEventListener('click', () => {
   window.browserAPI.setSidePanel(false);
 });
 document.querySelector('#side-bookmarks').addEventListener('click', () => togglePanel('bookmarks-panel', true));
-document.querySelectorAll('[data-close-panel]').forEach((button) => button.addEventListener('click', () => { document.querySelector(`#${button.dataset.closePanel}`).hidden = true; }));
+document.querySelectorAll('[data-close-panel]').forEach((button) => button.addEventListener('click', () => togglePanel(button.dataset.closePanel, false)));
 document.querySelector('#bookmark').addEventListener('click', async () => {
   renderBookmarks(await window.browserAPI.toggleBookmark());
   showToast('Favorito atualizado');

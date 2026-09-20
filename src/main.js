@@ -12,10 +12,13 @@ let selectedTabIds = [];
 let closedTabs = [];
 let mosaicMode = false;
 let sidePanelOpen = false;
+let uiOverlayOpen = false;
 const HEADER_HEIGHT = 46;
 const SIDE_PANEL_WIDTH = 330;
 const extensionStates = new Map();
 const extensionCatalog = new Map();
+
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 function createWindow() {
   Menu.setApplicationMenu(null);
@@ -50,6 +53,9 @@ function createWindow() {
       });
     });
   });
+  session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+    callback(['media', 'fullscreen', 'notifications'].includes(permission));
+  });
 }
 
 function createTab(url = HOME_URL) {
@@ -79,6 +85,11 @@ function createTab(url = HOME_URL) {
   });
   view.webContents.on('did-navigate', (_event, newUrl) => updateTab(tab, newUrl));
   view.webContents.on('did-navigate-in-page', (_event, newUrl) => updateTab(tab, newUrl));
+  view.webContents.on('did-finish-load', () => {
+    if (tab.url.includes('clarotvmais.com.br')) {
+      mainWindow.webContents.send('browser-toast', 'O Claro TV+ pode exigir Widevine/DRM, que não vem incluído no Electron.');
+    }
+  });
   view.webContents.on('focus', () => activateTab(id));
   view.webContents.on('did-start-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: true }));
   view.webContents.on('did-stop-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: false }));
@@ -162,7 +173,8 @@ function activateTab(id) {
 function layoutActiveView() {
   const [width, height] = mainWindow.getContentSize();
   const contentWidth = Math.max(0, width - (sidePanelOpen ? SIDE_PANEL_WIDTH : 0));
-  const contentHeight = Math.max(0, height - HEADER_HEIGHT);
+  const contentTop = HEADER_HEIGHT + (uiOverlayOpen ? 360 : 0);
+  const contentHeight = Math.max(0, height - contentTop);
   const visibleTabs = mosaicMode
     ? tabs.filter((tab) => selectedTabIds.includes(tab.id)).slice(0, 6)
     : tabs.filter((tab) => tab.id === activeTabId);
@@ -176,11 +188,12 @@ function layoutActiveView() {
     mainWindow.addBrowserView(entry.view);
     entry.view.setBounds({
       x: (index % columns) * tileWidth,
-      y: HEADER_HEIGHT + Math.floor(index / columns) * tileHeight,
+      y: contentTop + Math.floor(index / columns) * tileHeight,
       width: tileWidth,
       height: tileHeight
     });
     entry.view.setAutoResize({ width: true, height: true });
+    entry.view.webContents.setZoomFactor(mosaicMode ? 0.78 : 1);
   });
 }
 
@@ -242,6 +255,10 @@ ipcMain.handle('set-side-panel', (_event, enabled) => {
   sidePanelOpen = Boolean(enabled);
   layoutActiveView();
   sendTabs();
+});
+ipcMain.handle('set-ui-overlay', (_event, enabled) => {
+  uiOverlayOpen = Boolean(enabled);
+  layoutActiveView();
 });
 ipcMain.handle('navigate', (_event, value) => {
   const tab = tabs.find((entry) => entry.id === activeTabId);

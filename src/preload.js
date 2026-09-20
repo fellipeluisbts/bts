@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('browserAPI', {
   selectAllTabs: (selected) => ipcRenderer.invoke('tab-select-all', selected),
   setMosaic: (enabled) => ipcRenderer.invoke('set-mosaic', enabled),
   setSidePanel: (enabled) => ipcRenderer.invoke('set-side-panel', enabled),
+  setUiOverlay: (enabled) => ipcRenderer.invoke('set-ui-overlay', enabled),
   navigate: (value) => ipcRenderer.invoke('navigate', value),
   browserAction: (action) => ipcRenderer.invoke('browser-action', action),
   keyboardShortcut: (action) => ipcRenderer.invoke('keyboard-shortcut', action),
