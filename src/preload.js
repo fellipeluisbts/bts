@@ -22,5 +22,6 @@ contextBridge.exposeInMainWorld('browserAPI', {
   onBookmarksUpdated: (callback) => ipcRenderer.on('bookmarks-updated', (_event, data) => callback(data)),
   onDownloadStarted: (callback) => ipcRenderer.on('download-started', (_event, data) => callback(data)),
   onDownloadFinished: (callback) => ipcRenderer.on('download-finished', (_event, data) => callback(data)),
-  onBrowserToast: (callback) => ipcRenderer.on('browser-toast', (_event, message) => callback(message))
+  onBrowserToast: (callback) => ipcRenderer.on('browser-toast', (_event, message) => callback(message)),
+  onKeyboardAction: (callback) => ipcRenderer.on('keyboard-action', (_event, action) => callback(action))
 });

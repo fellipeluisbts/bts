@@ -28,7 +28,7 @@ function renderTabs(data) {
       if (!event.target.closest('input, button')) window.browserAPI.activateTab(tab.id);
     });
     const favicon = tab.favicon ? `<img src="${tab.favicon}" alt="">` : '<span class="tab-favicon">◉</span>';
-    element.innerHTML = `<input class="tab-check" type="checkbox" title="Selecionar no mosaico" ${selectedTabIds.includes(tab.id) ? 'checked' : ''}>${favicon}<span class="tab-title">${escapeHtml(tab.title)}</span><button class="tab-close" title="Fechar aba">×</button>`;
+    element.innerHTML = `${favicon}<span class="tab-title">${escapeHtml(tab.title)}</span><input class="tab-check" type="checkbox" title="Selecionar no mosaico" ${selectedTabIds.includes(tab.id) ? 'checked' : ''}><button class="tab-close" title="Fechar aba">×</button>`;
     element.querySelector('.tab-check').addEventListener('change', (event) => window.browserAPI.selectTab(tab.id, event.target.checked));
     element.querySelector('.tab-close').addEventListener('click', (event) => {
       event.stopPropagation();
@@ -137,5 +137,8 @@ window.browserAPI.onLoadingChanged(({ loading }) => {
 window.browserAPI.onDownloadStarted(({ filename }) => showToast(`Baixando ${filename}`));
 window.browserAPI.onDownloadFinished(({ filename, state }) => showToast(`${filename}: ${state === 'completed' ? 'concluído' : 'interrompido'}`));
 window.browserAPI.onBrowserToast(showToast);
+window.browserAPI.onKeyboardAction((action) => {
+  if (action === 'bookmarks') togglePanel('bookmarks-panel');
+});
 
 window.browserAPI.getState().then((state) => renderBookmarks(state.bookmarks));

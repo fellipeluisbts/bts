@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, dialog, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, BrowserView, dialog, ipcMain, Menu, session, shell } = require('electron');
 const path = require('node:path');
 
 const HOME_URL = 'https://www.google.com';
@@ -9,12 +9,14 @@ let nextTabId = 1;
 let historyEntries = [];
 let bookmarks = [];
 let selectedTabIds = [];
+let closedTabs = [];
 let mosaicMode = false;
 let sidePanelOpen = false;
-const HEADER_HEIGHT = 72;
+const HEADER_HEIGHT = 58;
 const SIDE_PANEL_WIDTH = 330;
 
 function createWindow() {
+  Menu.setApplicationMenu(null);
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -78,13 +80,56 @@ function createTab(url = HOME_URL) {
   view.webContents.on('did-start-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: true }));
   view.webContents.on('did-stop-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: false }));
   view.webContents.on('before-input-event', (_event, input) => {
-    if ((input.control || input.meta) && input.key.toLowerCase() === 'l') {
-      mainWindow.webContents.send('focus-address');
-    }
+    if (input.type !== 'keyDown') return;
+    const modifier = input.control || input.meta;
+    const key = input.key.toLowerCase();
+    if (modifier && key === 'l') { _event.preventDefault(); mainWindow.webContents.send('focus-address'); return; }
+    if (modifier && key === 'r') { _event.preventDefault(); tab.view.webContents.reload(); return; }
+    if (modifier && input.shift && key === 't') { _event.preventDefault(); reopenClosedTab(); return; }
+    if (modifier && input.shift && (key === 'i' || key === 'j')) { _event.preventDefault(); tab.view.webContents.openDevTools(); return; }
+    if (modifier && key === 't') { _event.preventDefault(); createTab(); return; }
+    if (modifier && key === 'w') { _event.preventDefault(); closeTab(id); return; }
+    if (modifier && key === 'd') { _event.preventDefault(); toggleBookmarkForTab(tab); return; }
+    if (modifier && key === 'p') { _event.preventDefault(); tab.view.webContents.print(); return; }
+    if (modifier && key === 'j') { _event.preventDefault(); mainWindow.webContents.send('browser-toast', 'A lista de downloads está disponível pelos downloads do Chromium.'); return; }
+    if (modifier && key === 'h') { _event.preventDefault(); mainWindow.webContents.send('browser-toast', 'O histórico desta sessão está em memória.'); return; }
+    if (modifier && input.shift && key === 'b') { _event.preventDefault(); mainWindow.webContents.send('keyboard-action', 'bookmarks'); return; }
+    if (modifier && key === 'tab') { _event.preventDefault(); switchTab(input.shift ? -1 : 1); return; }
+    if (modifier && /^[1-8]$/.test(key)) { _event.preventDefault(); activateTab(tabs[Number(key) - 1]?.id); return; }
+    if (modifier && key === '9') { _event.preventDefault(); activateTab(tabs[tabs.length - 1]?.id); return; }
+    if (key === 'f12') { _event.preventDefault(); tab.view.webContents.openDevTools(); }
+  });
+  view.webContents.on('context-menu', (event, params) => {
+    event.preventDefault();
+    showContextMenu(tab, params);
   });
   view.webContents.loadURL(url);
   activateTab(id);
   return tab;
+}
+
+function switchTab(direction) {
+  if (tabs.length < 2) return;
+  const currentIndex = tabs.findIndex((tab) => tab.id === activeTabId);
+  const nextIndex = (currentIndex + direction + tabs.length) % tabs.length;
+  activateTab(tabs[nextIndex].id);
+}
+
+function reopenClosedTab() {
+  const lastClosed = closedTabs.pop();
+  if (lastClosed) createTab(lastClosed.url);
+}
+
+function showContextMenu(tab, params) {
+  const menu = Menu.buildFromTemplate([
+    { label: 'Voltar', enabled: tab.view.webContents.canGoBack(), click: () => tab.view.webContents.goBack() },
+    { label: 'Avançar', enabled: tab.view.webContents.canGoForward(), click: () => tab.view.webContents.goForward() },
+    { type: 'separator' },
+    { label: 'Recarregar', click: () => tab.view.webContents.reload() },
+    { label: 'Salvar favorito', click: () => toggleBookmarkForTab(tab) },
+    { label: 'Inspecionar', click: () => tab.view.webContents.inspectElement(params.x, params.y) }
+  ]);
+  menu.popup({ window: mainWindow });
 }
 
 function updateTab(tab, url) {
@@ -139,6 +184,8 @@ function closeTab(id) {
   if (index === -1) return;
   const wasActive = activeTabId === id;
   const [tab] = tabs.splice(index, 1);
+  closedTabs.push({ url: tab.url, title: tab.title });
+  if (closedTabs.length > 10) closedTabs.shift();
   selectedTabIds = selectedTabIds.filter((tabId) => tabId !== id);
   tab.view.webContents.close();
   if (tabs.length === 0) createTab();
@@ -205,14 +252,18 @@ ipcMain.handle('get-browser-state', () => ({
   canGoBack: activeTabId ? tabs.find((tab) => tab.id === activeTabId).view.webContents.canGoBack() : false,
   canGoForward: activeTabId ? tabs.find((tab) => tab.id === activeTabId).view.webContents.canGoForward() : false
 }));
-ipcMain.handle('toggle-bookmark', () => {
-  const tab = tabs.find((entry) => entry.id === activeTabId);
-  if (!tab) return [];
+function toggleBookmarkForTab(tab) {
+  if (!tab) return bookmarks;
   const existing = bookmarks.findIndex((entry) => entry.url === tab.url);
   if (existing >= 0) bookmarks.splice(existing, 1);
   else bookmarks.unshift({ title: tab.title, url: tab.url });
   mainWindow.webContents.send('bookmarks-updated', bookmarks);
   return bookmarks;
+}
+
+ipcMain.handle('toggle-bookmark', () => {
+  const tab = tabs.find((entry) => entry.id === activeTabId);
+  return toggleBookmarkForTab(tab);
 });
 ipcMain.handle('clear-cookies', async (_event, mode) => {
   const tab = tabs.find((entry) => entry.id === activeTabId);
