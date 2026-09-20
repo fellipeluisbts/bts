@@ -14,6 +14,8 @@ let mosaicMode = false;
 let sidePanelOpen = false;
 const HEADER_HEIGHT = 58;
 const SIDE_PANEL_WIDTH = 330;
+const extensionStates = new Map();
+const extensionCatalog = new Map();
 
 function createWindow() {
   Menu.setApplicationMenu(null);
@@ -77,8 +79,10 @@ function createTab(url = HOME_URL) {
   });
   view.webContents.on('did-navigate', (_event, newUrl) => updateTab(tab, newUrl));
   view.webContents.on('did-navigate-in-page', (_event, newUrl) => updateTab(tab, newUrl));
+  view.webContents.on('focus', () => activateTab(id));
   view.webContents.on('did-start-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: true }));
   view.webContents.on('did-stop-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: false }));
+  view.webContents.on('dom-ready', () => view.webContents.insertCSS('html { border: 1px solid #d4d8de !important; }'));
   view.webContents.on('before-input-event', (_event, input) => {
     if (input.type !== 'keyDown') return;
     const modifier = input.control || input.meta;
@@ -154,8 +158,8 @@ function layoutActiveView() {
   const visibleTabs = mosaicMode
     ? tabs.filter((tab) => selectedTabIds.includes(tab.id)).slice(0, 6)
     : tabs.filter((tab) => tab.id === activeTabId);
-  const columns = visibleTabs.length <= 1 ? 1 : visibleTabs.length <= 2 ? 2 : 3;
-  const rows = Math.ceil(visibleTabs.length / columns);
+  const columns = visibleTabs.length <= 1 ? 1 : visibleTabs.length === 2 ? 2 : visibleTabs.length <= 4 ? 2 : 3;
+  const rows = visibleTabs.length <= 2 ? 1 : 2;
   const tileWidth = Math.floor(contentWidth / columns);
   const tileHeight = Math.floor(contentHeight / rows);
 
@@ -165,8 +169,8 @@ function layoutActiveView() {
     entry.view.setBounds({
       x: (index % columns) * tileWidth,
       y: HEADER_HEIGHT + Math.floor(index / columns) * tileHeight,
-      width: index % columns === columns - 1 ? contentWidth - (index % columns) * tileWidth : tileWidth,
-      height: index >= visibleTabs.length - columns ? contentHeight - Math.floor(index / columns) * tileHeight : tileHeight
+      width: tileWidth,
+      height: tileHeight
     });
     entry.view.setAutoResize({ width: true, height: true });
   });
@@ -274,7 +278,41 @@ ipcMain.handle('clear-cookies', async (_event, mode) => {
   await session.defaultSession.clearStorageData(options);
   return mode === 'tab' ? 'Cookies e dados da aba limpos.' : 'Cookies e dados do navegador limpos.';
 });
-ipcMain.handle('get-extensions', () => session.defaultSession.getAllExtensions().map(({ id, name, version, path: extensionPath }) => ({ id, name, version, path: extensionPath })));
+ipcMain.handle('get-extensions', () => {
+  const activeExtensions = session.defaultSession.getAllExtensions();
+  activeExtensions.forEach((extension) => extensionCatalog.set(extension.id, extension));
+  return [...extensionCatalog.values()].map(({ id, name, version, path: extensionPath, manifest }) => ({
+    id,
+    name,
+    version,
+    path: extensionPath,
+    enabled: activeExtensions.some((extension) => extension.id === id),
+    hasOptions: Boolean(manifest?.options_page || manifest?.options_ui?.page)
+  }));
+});
+ipcMain.handle('set-extension-enabled', async (_event, id, enabled) => {
+  const extension = session.defaultSession.getAllExtensions().find((entry) => entry.id === id);
+  if (enabled && !extension) {
+    const extensionPath = extensionStates.get(id) || extensionCatalog.get(id)?.path;
+    if (extensionPath) {
+      const loadedExtension = await session.defaultSession.loadExtension(extensionPath);
+      extensionCatalog.set(loadedExtension.id, loadedExtension);
+    }
+  } else if (!enabled && extension) {
+    extensionStates.set(id, extension.path);
+    extensionCatalog.set(id, extension);
+    session.defaultSession.removeExtension(id);
+  }
+  return session.defaultSession.getAllExtensions();
+});
+ipcMain.handle('open-extension-options', (_event, id) => {
+  const extension = session.defaultSession.getAllExtensions().find((entry) => entry.id === id);
+  const optionsPage = extension?.manifest?.options_page || extension?.manifest?.options_ui?.page;
+  if (optionsPage) createTab(`chrome-extension://${id}/${optionsPage}`);
+  else mainWindow.webContents.send('browser-toast', 'Esta extensão não possui página de opções.');
+});
+ipcMain.handle('manage-extensions', () => createTab('chrome://extensions'));
+ipcMain.handle('open-webstore', () => createTab('https://chromewebstore.google.com/'));
 ipcMain.handle('install-extension', async () => {
   const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'], title: 'Selecionar pasta da extensão' });
   if (result.canceled || !result.filePaths[0]) return session.defaultSession.getAllExtensions();

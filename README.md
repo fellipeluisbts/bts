@@ -23,8 +23,11 @@ No Windows, tambem e possivel clicar duas vezes no arquivo `abrir-navegador.bat`
 - Downloads e DevTools do Chromium
 - Barra única com mosaico de até seis abas selecionadas por checkbox
 - Painel lateral, favoritos em painel e menu de perfil/extensões/privacidade
+- Mosaico com grades fixas de 1, 2x1, 2x2 e 3x2, com borda em cada janela
+- Extensões com ativar/desativar, gerenciamento, opções e acesso à Chrome Web Store
 
 Atalhos principais: `Ctrl+T` nova aba, `Ctrl+W` fechar aba, `Ctrl+Shift+T` reabrir aba, `Ctrl+L` endereço, `Ctrl+D` favorito, `Ctrl+Tab` alternar abas, `Ctrl+1` a `Ctrl+9` selecionar aba, `Ctrl+Shift+I` ou `F12` DevTools e `Ctrl+Shift+B` favoritos.
 
 O projeto usa APIs públicas do Chromium/Electron e uma identidade visual própria. Recursos exclusivos da distribuição Google Chrome, como sincronização de conta, não fazem parte desta base.
 O item Perfil abre a autenticação Google no navegador; sincronização completa de conta Google e instalação automática da Chrome Web Store exigem integrações proprietárias que não são fornecidas pelo Electron.
+O botão Chrome Web Store abre a loja dentro de uma aba. A instalação direta pelo botão oficial da loja não é liberada pelo Electron; extensões podem ser instaladas pelo botão de instalação local usando a pasta descompactada da extensão.

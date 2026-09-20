@@ -22,9 +22,11 @@
         <button id="bookmark" class="address-action" type="button" title="Salvar favorito">&#9734;</button>
       </form>
       <div id="tabs" class="tabs"></div>
-      <button id="new-tab" class="icon-button tab-add" title="Nova aba">+</button>
-      <button id="side-panel" class="icon-button" title="Painel lateral">&#9776;</button>
-      <button id="menu-button" class="icon-button more" title="Menu">&#8942;</button>
+      <div class="right-controls">
+        <button id="new-tab" class="icon-button tab-add" title="Nova aba">+</button>
+        <button id="side-panel" class="icon-button" title="Painel lateral">&#9776;</button>
+        <button id="menu-button" class="icon-button more" title="Menu">&#8942;</button>
+      </div>
     </div>
   </header>
   <aside id="bookmarks-panel" class="floating-panel bookmarks-panel" hidden>
@@ -42,6 +44,7 @@
     <div class="menu-section-title">Extensões</div>
     <div id="extensions-list" class="extensions-list"></div>
     <button class="menu-item compact" id="install-extension">+ Instalar extensão</button>
+    <button class="menu-item compact" id="open-webstore">Chrome Web Store</button>
     <button class="menu-item compact" id="manage-extensions">Gerenciar extensões</button>
     <div class="menu-divider"></div>
     <div class="menu-section-title">Privacidade</div>
@@ -49,6 +52,10 @@
     <button class="menu-item compact" id="clear-browser-cookies">Limpar cookies do navegador</button>
     <div class="menu-divider"></div>
     <button class="menu-item compact" data-action="devtools">Ferramentas do desenvolvedor</button>
+  </aside>
+  <aside id="extension-context-menu" class="extension-context-menu" hidden>
+    <button id="context-manage-extension">Gerenciar extensão</button>
+    <button id="context-extension-options">Opções da extensão</button>
   </aside>
   <aside id="toast" class="toast" aria-live="polite"></aside>
   <script src="renderer.js"></script>

@@ -6,6 +6,7 @@ const toast = document.querySelector('#toast');
 let activeTabId = null;
 let currentBookmarks = [];
 let selectedTabIds = [];
+let contextExtensionId = null;
 let toastTimer;
 
 function showToast(message) {
@@ -71,7 +72,19 @@ async function renderExtensions() {
   extensions.forEach((extension) => {
     const item = document.createElement('div');
     item.className = 'extension-item';
-    item.innerHTML = `<span class="extension-icon">◇</span><span><strong>${escapeHtml(extension.name)}</strong><small>Versão ${escapeHtml(extension.version)}</small></span>`;
+    item.innerHTML = `<span class="extension-icon">◇</span><span class="extension-copy"><strong>${escapeHtml(extension.name)}</strong><small>Versão ${escapeHtml(extension.version)}</small></span><label class="switch" title="Ativar ou desativar"><input type="checkbox" ${extension.enabled ? 'checked' : ''}><span class="switch-slider"></span></label>`;
+    item.querySelector('input').addEventListener('change', async (event) => {
+      await window.browserAPI.setExtensionEnabled(extension.id, event.target.checked);
+      await renderExtensions();
+    });
+    item.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      contextExtensionId = extension.id;
+      const contextMenu = document.querySelector('#extension-context-menu');
+      contextMenu.style.left = `${event.clientX}px`;
+      contextMenu.style.top = `${event.clientY}px`;
+      contextMenu.hidden = false;
+    });
     list.append(item);
   });
 }
@@ -120,7 +133,16 @@ document.querySelector('#install-extension').addEventListener('click', async () 
   await renderExtensions();
   showToast('Extensões atualizadas');
 });
-document.querySelector('#manage-extensions').addEventListener('click', () => showToast('Use as opções do menu para instalar extensões locais.'));
+document.querySelector('#manage-extensions').addEventListener('click', () => window.browserAPI.manageExtensions());
+document.querySelector('#open-webstore').addEventListener('click', () => window.browserAPI.openWebStore());
+document.querySelector('#context-manage-extension').addEventListener('click', () => {
+  document.querySelector('#extension-context-menu').hidden = true;
+  window.browserAPI.manageExtensions();
+});
+document.querySelector('#context-extension-options').addEventListener('click', () => {
+  document.querySelector('#extension-context-menu').hidden = true;
+  if (contextExtensionId) window.browserAPI.openExtensionOptions(contextExtensionId);
+});
 document.querySelector('#clear-tab-cookies').addEventListener('click', async () => showToast(await window.browserAPI.clearCookies('tab')));
 document.querySelector('#clear-browser-cookies').addEventListener('click', async () => showToast(await window.browserAPI.clearCookies('browser')));
 
@@ -140,5 +162,6 @@ window.browserAPI.onBrowserToast(showToast);
 window.browserAPI.onKeyboardAction((action) => {
   if (action === 'bookmarks') togglePanel('bookmarks-panel');
 });
+document.addEventListener('click', () => { document.querySelector('#extension-context-menu').hidden = true; });
 
 window.browserAPI.getState().then((state) => renderBookmarks(state.bookmarks));
