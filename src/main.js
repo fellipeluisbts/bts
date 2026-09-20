@@ -12,7 +12,7 @@ let selectedTabIds = [];
 let closedTabs = [];
 let mosaicMode = false;
 let sidePanelOpen = false;
-const HEADER_HEIGHT = 58;
+const HEADER_HEIGHT = 46;
 const SIDE_PANEL_WIDTH = 330;
 const extensionStates = new Map();
 const extensionCatalog = new Map();
@@ -83,6 +83,7 @@ function createTab(url = HOME_URL) {
   view.webContents.on('did-start-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: true }));
   view.webContents.on('did-stop-loading', () => mainWindow.webContents.send('loading-changed', { id, loading: false }));
   view.webContents.on('dom-ready', () => view.webContents.insertCSS('html { border: 1px solid #d4d8de !important; }'));
+  view.webContents.on('dom-ready', () => view.webContents.insertCSS('::-webkit-scrollbar { width: 0 !important; height: 0 !important; }'));
   view.webContents.on('before-input-event', (_event, input) => {
     if (input.type !== 'keyDown') return;
     const modifier = input.control || input.meta;
@@ -97,6 +98,13 @@ function createTab(url = HOME_URL) {
     if (modifier && key === 'p') { _event.preventDefault(); tab.view.webContents.print(); return; }
     if (modifier && key === 'j') { _event.preventDefault(); mainWindow.webContents.send('browser-toast', 'A lista de downloads está disponível pelos downloads do Chromium.'); return; }
     if (modifier && key === 'h') { _event.preventDefault(); mainWindow.webContents.send('browser-toast', 'O histórico desta sessão está em memória.'); return; }
+    if (modifier && key === 'f') { _event.preventDefault(); mainWindow.webContents.send('browser-toast', 'Use a busca da página do site para localizar texto.'); return; }
+    if (modifier && key === 's') { _event.preventDefault(); tab.view.webContents.downloadURL(tab.url); return; }
+    if (modifier && input.shift && key === 'u') { _event.preventDefault(); tab.view.webContents.loadURL(`view-source:${tab.url}`); return; }
+    if (modifier && input.shift && key === 'delete') { _event.preventDefault(); session.defaultSession.clearStorageData(); mainWindow.webContents.send('browser-toast', 'Cookies e dados de navegação limpos.'); return; }
+    if (input.alt && key === 'arrowleft' && tab.view.webContents.canGoBack()) { _event.preventDefault(); tab.view.webContents.goBack(); return; }
+    if (input.alt && key === 'arrowright' && tab.view.webContents.canGoForward()) { _event.preventDefault(); tab.view.webContents.goForward(); return; }
+    if (key === 'f5') { _event.preventDefault(); tab.view.webContents.reload(); return; }
     if (modifier && input.shift && key === 'b') { _event.preventDefault(); mainWindow.webContents.send('keyboard-action', 'bookmarks'); return; }
     if (modifier && key === 'tab') { _event.preventDefault(); switchTab(input.shift ? -1 : 1); return; }
     if (modifier && /^[1-8]$/.test(key)) { _event.preventDefault(); activateTab(tabs[Number(key) - 1]?.id); return; }
@@ -224,6 +232,11 @@ ipcMain.handle('tab-select', (_event, id, selected) => {
   if (mosaicMode) layoutActiveView();
   sendTabs();
 });
+ipcMain.handle('tab-select-all', (_event, selected) => {
+  selectedTabIds = selected ? tabs.map((tab) => tab.id) : [];
+  if (mosaicMode) layoutActiveView();
+  sendTabs();
+});
 ipcMain.handle('set-mosaic', (_event, enabled) => setMosaic(enabled));
 ipcMain.handle('set-side-panel', (_event, enabled) => {
   sidePanelOpen = Boolean(enabled);
@@ -249,6 +262,16 @@ ipcMain.handle('browser-action', (_event, action) => {
   if (action === 'home') tab.view.webContents.loadURL(HOME_URL);
   if (action === 'devtools') tab.view.webContents.openDevTools();
 });
+ipcMain.handle('keyboard-shortcut', (_event, action) => {
+  if (action === 'new-tab') createTab();
+  if (action === 'close-tab' && activeTabId) closeTab(activeTabId);
+  if (action === 'reopen-tab') reopenClosedTab();
+  if (action === 'next-tab') switchTab(1);
+  if (action === 'previous-tab') switchTab(-1);
+  if (action === 'focus-address') mainWindow.webContents.send('focus-address');
+  if (action === 'toggle-bookmark') toggleBookmarkForTab(tabs.find((tab) => tab.id === activeTabId));
+  if (action === 'bookmarks') mainWindow.webContents.send('keyboard-action', 'bookmarks');
+});
 ipcMain.handle('get-browser-state', () => ({
   history: historyEntries,
   bookmarks,
@@ -265,6 +288,19 @@ function toggleBookmarkForTab(tab) {
   return bookmarks;
 }
 
+function getExtensionList() {
+  const activeExtensions = session.defaultSession.getAllExtensions();
+  activeExtensions.forEach((extension) => extensionCatalog.set(extension.id, extension));
+  return [...extensionCatalog.values()].map(({ id, name, version, path: extensionPath, manifest }) => ({
+    id,
+    name,
+    version,
+    path: extensionPath,
+    enabled: activeExtensions.some((extension) => extension.id === id),
+    hasOptions: Boolean(manifest?.options_page || manifest?.options_ui?.page)
+  }));
+}
+
 ipcMain.handle('toggle-bookmark', () => {
   const tab = tabs.find((entry) => entry.id === activeTabId);
   return toggleBookmarkForTab(tab);
@@ -278,18 +314,7 @@ ipcMain.handle('clear-cookies', async (_event, mode) => {
   await session.defaultSession.clearStorageData(options);
   return mode === 'tab' ? 'Cookies e dados da aba limpos.' : 'Cookies e dados do navegador limpos.';
 });
-ipcMain.handle('get-extensions', () => {
-  const activeExtensions = session.defaultSession.getAllExtensions();
-  activeExtensions.forEach((extension) => extensionCatalog.set(extension.id, extension));
-  return [...extensionCatalog.values()].map(({ id, name, version, path: extensionPath, manifest }) => ({
-    id,
-    name,
-    version,
-    path: extensionPath,
-    enabled: activeExtensions.some((extension) => extension.id === id),
-    hasOptions: Boolean(manifest?.options_page || manifest?.options_ui?.page)
-  }));
-});
+ipcMain.handle('get-extensions', getExtensionList);
 ipcMain.handle('set-extension-enabled', async (_event, id, enabled) => {
   const extension = session.defaultSession.getAllExtensions().find((entry) => entry.id === id);
   if (enabled && !extension) {
@@ -303,7 +328,7 @@ ipcMain.handle('set-extension-enabled', async (_event, id, enabled) => {
     extensionCatalog.set(id, extension);
     session.defaultSession.removeExtension(id);
   }
-  return session.defaultSession.getAllExtensions();
+  return getExtensionList();
 });
 ipcMain.handle('open-extension-options', (_event, id) => {
   const extension = session.defaultSession.getAllExtensions().find((entry) => entry.id === id);
@@ -312,12 +337,12 @@ ipcMain.handle('open-extension-options', (_event, id) => {
   else mainWindow.webContents.send('browser-toast', 'Esta extensão não possui página de opções.');
 });
 ipcMain.handle('manage-extensions', () => createTab('chrome://extensions'));
-ipcMain.handle('open-webstore', () => createTab('https://chromewebstore.google.com/'));
+ipcMain.handle('open-webstore', () => shell.openExternal('https://chromewebstore.google.com/'));
 ipcMain.handle('install-extension', async () => {
   const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'], title: 'Selecionar pasta da extensão' });
-  if (result.canceled || !result.filePaths[0]) return session.defaultSession.getAllExtensions();
+  if (result.canceled || !result.filePaths[0]) return getExtensionList();
   await session.defaultSession.loadExtension(result.filePaths[0]);
-  return session.defaultSession.getAllExtensions();
+  return getExtensionList();
 });
 ipcMain.handle('open-external', (_event, url) => shell.openExternal(url));
 ipcMain.handle('open-profile', () => shell.openExternal('https://accounts.google.com/'));

@@ -21,6 +21,9 @@ function renderTabs(data) {
   selectedTabIds = data.selectedTabIds || [];
   document.querySelector('#mosaic').classList.toggle('active', data.mosaicMode);
   document.querySelector('#side-panel').classList.toggle('active', data.sidePanelOpen);
+  const selectAll = document.querySelector('#select-all-tabs');
+  selectAll.checked = data.tabs.length > 0 && data.tabs.every((tab) => selectedTabIds.includes(tab.id));
+  selectAll.indeterminate = selectedTabIds.length > 0 && !selectAll.checked;
   tabsElement.replaceChildren();
   for (const tab of data.tabs) {
     const element = document.createElement('div');
@@ -105,19 +108,27 @@ document.querySelector('#mosaic').addEventListener('click', (event) => {
   window.browserAPI.setMosaic(enabled);
   if (enabled) showToast('Mosaico ativado');
 });
+document.querySelector('#select-all-tabs').addEventListener('change', (event) => {
+  window.browserAPI.selectAllTabs(event.target.checked);
+});
 document.querySelector('#bookmarks').addEventListener('click', () => togglePanel('bookmarks-panel'));
 document.querySelector('#menu-button').addEventListener('click', async () => {
+  const sidePanel = document.querySelector('#side-panel-content');
+  const menu = document.querySelector('#browser-menu');
+  menu.style.right = sidePanel.hidden ? '10px' : '340px';
   togglePanel('browser-menu');
   await renderExtensions();
 });
 document.querySelector('#side-panel').addEventListener('click', (event) => {
   const enabled = !event.currentTarget.classList.contains('active');
   document.querySelector('#side-panel-content').hidden = !enabled;
+  document.querySelector('#browser-menu').style.right = enabled ? '340px' : '10px';
   window.browserAPI.setSidePanel(enabled);
 });
 document.querySelector('#close-side-panel').addEventListener('click', () => {
   document.querySelector('#side-panel').classList.remove('active');
   document.querySelector('#side-panel-content').hidden = true;
+  document.querySelector('#browser-menu').style.right = '10px';
   window.browserAPI.setSidePanel(false);
 });
 document.querySelector('#side-bookmarks').addEventListener('click', () => togglePanel('bookmarks-panel', true));
@@ -145,6 +156,25 @@ document.querySelector('#context-extension-options').addEventListener('click', (
 });
 document.querySelector('#clear-tab-cookies').addEventListener('click', async () => showToast(await window.browserAPI.clearCookies('tab')));
 document.querySelector('#clear-browser-cookies').addEventListener('click', async () => showToast(await window.browserAPI.clearCookies('browser')));
+
+document.addEventListener('keydown', (event) => {
+  const modifier = event.ctrlKey || event.metaKey;
+  if (!modifier) return;
+  const key = event.key.toLowerCase();
+  const shortcuts = {
+    t: event.shiftKey ? 'reopen-tab' : 'new-tab',
+    w: 'close-tab',
+    l: 'focus-address',
+    d: 'toggle-bookmark',
+    b: event.shiftKey ? 'bookmarks' : null,
+    tab: event.shiftKey ? 'previous-tab' : 'next-tab'
+  };
+  const action = shortcuts[key];
+  if (action) {
+    event.preventDefault();
+    window.browserAPI.keyboardShortcut(action);
+  }
+});
 
 document.querySelectorAll('[data-action]').forEach((button) => {
   button.addEventListener('click', () => window.browserAPI.browserAction(button.dataset.action));

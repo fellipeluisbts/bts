@@ -30,4 +30,4 @@ Atalhos principais: `Ctrl+T` nova aba, `Ctrl+W` fechar aba, `Ctrl+Shift+T` reabr
 
 O projeto usa APIs públicas do Chromium/Electron e uma identidade visual própria. Recursos exclusivos da distribuição Google Chrome, como sincronização de conta, não fazem parte desta base.
 O item Perfil abre a autenticação Google no navegador; sincronização completa de conta Google e instalação automática da Chrome Web Store exigem integrações proprietárias que não são fornecidas pelo Electron.
-O botão Chrome Web Store abre a loja dentro de uma aba. A instalação direta pelo botão oficial da loja não é liberada pelo Electron; extensões podem ser instaladas pelo botão de instalação local usando a pasta descompactada da extensão.
+O botão Chrome Web Store abre a loja no navegador padrão do Windows, onde o Chrome pode concluir a instalação. A instalação de extensões no BTS Browser é feita pelo botão local usando a pasta descompactada da extensão.
