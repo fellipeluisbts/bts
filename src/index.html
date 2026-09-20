@@ -8,26 +8,48 @@
 </head>
 <body>
   <header class="chrome-shell">
-    <div class="tab-strip">
-      <div id="tabs" class="tabs"></div>
-      <button id="new-tab" class="icon-button tab-add" title="Nova aba">+</button>
-      <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
-    </div>
     <div class="toolbar">
       <div class="nav-actions">
         <button class="icon-button" data-action="back" title="Voltar">&#8592;</button>
         <button class="icon-button" data-action="forward" title="Avançar">&#8594;</button>
         <button id="reload" class="icon-button" data-action="reload" title="Recarregar">&#8635;</button>
       </div>
+      <button id="mosaic" class="icon-button" title="Mosaico de abas">&#9638;</button>
+      <button id="bookmarks" class="icon-button" title="Favoritos">&#9733;</button>
       <form id="address-form" class="address-form">
         <span class="site-info">&#128274;</span>
         <input id="address" autocomplete="off" spellcheck="false" aria-label="Barra de endereço" placeholder="Pesquisar ou digitar um endereço">
-        <button id="bookmark" class="address-action" type="button" title="Adicionar aos favoritos">&#9734;</button>
+        <button id="bookmark" class="address-action" type="button" title="Salvar favorito">&#9734;</button>
       </form>
-      <button class="icon-button more" data-action="devtools" title="Mais opções">&#8942;</button>
+      <div id="tabs" class="tabs"></div>
+      <button id="new-tab" class="icon-button tab-add" title="Nova aba">+</button>
+      <button id="side-panel" class="icon-button" title="Painel lateral">&#9776;</button>
+      <button id="menu-button" class="icon-button more" title="Menu">&#8942;</button>
     </div>
-    <div class="bookmarks-bar" id="bookmarks-bar"></div>
   </header>
+  <aside id="bookmarks-panel" class="floating-panel bookmarks-panel" hidden>
+    <div class="panel-heading"><strong>Favoritos</strong><button class="panel-close" data-close-panel="bookmarks-panel">×</button></div>
+    <div id="bookmarks-list" class="panel-list"></div>
+  </aside>
+  <aside id="side-panel-content" class="side-panel" hidden>
+    <div class="panel-heading"><strong>Painel lateral</strong><button class="panel-close" id="close-side-panel">×</button></div>
+    <p>Use este espaço para favoritos, lista de leitura ou ferramentas do navegador.</p>
+    <button class="panel-link" id="side-bookmarks">Abrir favoritos</button>
+  </aside>
+  <aside id="browser-menu" class="floating-panel browser-menu" hidden>
+    <button class="menu-item" id="profile"><span>◉</span><span><strong>Perfil</strong><small>Entrar com uma conta Google</small></span></button>
+    <div class="menu-divider"></div>
+    <div class="menu-section-title">Extensões</div>
+    <div id="extensions-list" class="extensions-list"></div>
+    <button class="menu-item compact" id="install-extension">+ Instalar extensão</button>
+    <button class="menu-item compact" id="manage-extensions">Gerenciar extensões</button>
+    <div class="menu-divider"></div>
+    <div class="menu-section-title">Privacidade</div>
+    <button class="menu-item compact" id="clear-tab-cookies">Limpar cookies desta aba</button>
+    <button class="menu-item compact" id="clear-browser-cookies">Limpar cookies do navegador</button>
+    <div class="menu-divider"></div>
+    <button class="menu-item compact" data-action="devtools">Ferramentas do desenvolvedor</button>
+  </aside>
   <aside id="toast" class="toast" aria-live="polite"></aside>
   <script src="renderer.js"></script>
 </body>

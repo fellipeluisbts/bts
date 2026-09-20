@@ -19,5 +19,8 @@ npm start
 - Favoritos persistidos durante a sessão
 - Histórico em memória
 - Downloads e DevTools do Chromium
+- Barra única com mosaico de até seis abas selecionadas por checkbox
+- Painel lateral, favoritos em painel e menu de perfil/extensões/privacidade
 
 O projeto usa APIs públicas do Chromium/Electron e uma identidade visual própria. Recursos exclusivos da distribuição Google Chrome, como sincronização de conta, não fazem parte desta base.
+O item Perfil abre a autenticação Google no navegador; sincronização completa de conta Google e instalação automática da Chrome Web Store exigem integrações proprietárias que não são fornecidas pelo Electron.
