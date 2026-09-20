@@ -9,6 +9,8 @@ npm install
 npm start
 ```
 
+No Windows, tambem e possivel clicar duas vezes no arquivo `abrir-navegador.bat`. Ele instala as dependencias na primeira execucao e abre o navegador automaticamente.
+
 > Importante: o Electron abre uma janela do computador. Se este projeto estiver em um Codespace ou VS Code pelo navegador, ele nao conseguira mostrar a janela porque o container nao possui tela grafica. Baixe ou clone o projeto e abra-o no VS Code instalado no seu computador para executar `npm start`.
 
 ## Recursos da primeira versão
