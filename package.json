@@ -1,0 +1,13 @@
+{
+  "name": "bts-browser",
+  "version": "0.1.0",
+  "description": "Navegador desktop baseado em Chromium",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "node scripts/check-display.js && electron .",
+    "dev": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^35.0.0"
+  }
+}
